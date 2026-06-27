@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13233A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Home Solar">
+<title>Home Solar Monitoring</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Home Solar Monitoring","short_name":"Home Solar","start_url":".","display":"standalone","background_color":"%2313233A","theme_color":"%2313233A","icons":[]}'>
+<style>
+:root{
+  --navy:#13233A; --blue:#1E60D6; --bg:#EEF1F6; --card:#FFFFFF; --line:#DCE2EC;
+  --text:#1B2430; --muted:#6B7686; --c1:#E8663B; --c2:#2D7DD2; --c3:#2BB673;
+  --good:#1F9D55; --warn:#C2410C; --gold:#F4C84A;
+}
+/* ---------- splash / starting page ---------- */
+#splash{
+  position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 18%,#1b3354 0%,#13233A 55%,#0d1a2c 100%);
+  color:#fff;transition:opacity .45s ease;text-align:center;padding:24px;
+}
+#splash.hide{opacity:0;pointer-events:none}
+.sp-inner{display:flex;flex-direction:column;align-items:center;max-width:340px;animation:spRise .7s ease both}
+@keyframes spRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.sp-logo{width:96px;height:96px;margin-bottom:22px;filter:drop-shadow(0 10px 24px rgba(0,0,0,.35));animation:spPop .8s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes spPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.sp-name{font-size:27px;font-weight:800;letter-spacing:-.4px;line-height:1.15}
+.sp-tag{margin-top:8px;font-size:13px;color:#AEB9CC;letter-spacing:.4px}
+.sp-rule{width:46px;height:3px;border-radius:2px;background:var(--gold);margin:22px 0 16px;opacity:.9}
+.sp-by{display:flex;align-items:center;gap:9px;font-size:13px;color:#C7D0DE}
+.sp-by b{color:#fff;font-weight:700;letter-spacing:.2px}
+.mf-logo{width:30px;height:30px;object-fit:contain;display:block}
+.sp-next{margin-top:30px;background:var(--gold);color:#13233A;border:0;border-radius:30px;
+  padding:14px 46px;font-size:15px;font-weight:800;letter-spacing:.3px;cursor:pointer;
+  box-shadow:0 10px 24px rgba(244,200,74,.32);transition:transform .14s ease, box-shadow .14s ease;
+  animation:spRise .9s ease both}
+.sp-next:hover{box-shadow:0 12px 28px rgba(244,200,74,.42)}
+.sp-next:active{transform:scale(.96)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--text); font-size:15px; line-height:1.45;
+  padding-bottom:calc(70px + env(safe-area-inset-bottom));
+}
+.app{max-width:560px;margin:0 auto;min-height:100vh}
+/* top bar */
+.bar{
+  position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.bar .mark{width:26px;height:26px;flex:0 0 26px}
+.bar h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.2px;line-height:1.2}
+.bar .sub{font-size:11px;color:#AEB9CC;margin-top:1px}
+.bar select{margin-left:auto;background:#1C3252;color:#fff;border:1px solid #2b466e;
+  border-radius:8px;padding:7px 9px;font-size:14px;max-width:42%}
+.wrap{padding:16px}
+h2.view{font-size:20px;margin:2px 2px 12px;font-weight:700}
+.muted{color:var(--muted)} .small{font-size:12px} .tiny{font-size:11px}
+/* cards */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card .top{height:4px}
+.card .pad{padding:13px 14px}
+.card .lbl{font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+.card .val{font-size:24px;font-weight:800;margin-top:3px;letter-spacing:-.5px}
+.card .sub{font-size:11px;color:var(--muted)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.panel h3{margin:0 0 4px;font-size:15px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 4px}
+.legend span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.chartscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* tables */
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:9px 8px;font-size:13px;text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.4px;
+   border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card)}
+td{border-bottom:1px solid #F0F3F8}
+th:first-child,td:first-child{text-align:left}
+tr.tot td{background:#EEF3FB;font-weight:700}
+.tblscroll{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.readrow:active{background:#EAF1FF}
+.unit{color:var(--muted)}
+/* buttons */
+.btn{appearance:none;border:0;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700;
+  background:var(--blue);color:#fff;cursor:pointer}
+.btn.ghost{background:#E3E9F2;color:var(--text)}
+.btn.danger{background:#C0392B;color:#fff}
+.btn.block{display:block;width:100%}
+.btnrow{display:flex;gap:8px;margin:4px 0 14px}
+.btnrow .btn{flex:1}
+/* settlement */
+.calc{background:#F7F9FC;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:12px 0}
+.calc .f{font-size:12.5px;color:var(--muted)}
+.calc .r{font-size:16px;font-weight:800;margin-top:5px}
+.kv{display:flex;justify-content:space-between;padding:7px 2px;border-bottom:1px solid #F0F3F8;font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv b{font-weight:700}
+/* form fields */
+.field{margin:10px 0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.field input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff}
+/* bottom nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
+  display:flex;max-width:560px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
+.nav button{flex:1;background:none;border:0;padding:9px 0 7px;color:var(--muted);font-size:10.5px;font-weight:600;cursor:pointer}
+.nav button .ic{display:block;font-size:19px;line-height:1;margin-bottom:3px}
+.nav button.active{color:var(--blue)}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(13,20,32,.5);z-index:50;display:none;align-items:flex-end}
+.overlay.show{display:flex}
+.sheet{background:#fff;width:100%;max-width:560px;margin:0 auto;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 10px}
+.empty{text-align:center;color:var(--muted);padding:50px 20px}
+.empty .big{font-size:40px}
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#13233A;color:#fff;
+  padding:10px 16px;border-radius:20px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="sp-inner">
+    <svg class="sp-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="11" fill="#0f1d31"/>
+      <circle cx="24" cy="19" r="7" fill="#F5A623"/>
+      <g stroke="#F5A623" stroke-width="2" stroke-linecap="round">
+        <line x1="24" y1="6" x2="24" y2="9"/><line x1="35" y1="19" x2="38" y2="19"/>
+        <line x1="10" y1="19" x2="13" y2="19"/><line x1="32" y1="11" x2="34" y2="9"/>
+        <line x1="16" y1="11" x2="14" y2="9"/><line x1="32" y1="27" x2="34" y2="29"/><line x1="16" y1="27" x2="14" y2="29"/>
+      </g>
+      <rect x="13" y="33" width="6" height="9" rx="1.5" fill="#E8663B"/>
+      <rect x="21" y="29" width="6" height="13" rx="1.5" fill="#2D7DD2"/>
+      <rect x="29" y="25" width="6" height="17" rx="1.5" fill="#2BB673"/>
+    </svg>
+    <div class="sp-name">Home Solar Monitoring</div>
+    <div class="sp-tag">Readings · Savings · Exports</div>
+    <div class="sp-rule"></div>
+    <div class="sp-by">
+      <span>by</span>
+      <img class="mf-logo" src="data:image/png;base64,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" alt="MarkFold Digital">
+      <b>MarkFold Digital</b>
+    </div>
+    <button class="sp-next" onclick="hideSplash()">Next &rarr;</button>
+  </div>
+</div>
+<div class="app">
+  <div class="bar">
+    <svg class="mark" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="19" r="7" fill="#F5A623"/>
+      <g stroke="#F5A623" stroke-width="2" stroke-linecap="round">
+        <line x1="24" y1="6" x2="24" y2="9"/><line x1="35" y1="19" x2="38" y2="19"/>
+        <line x1="10" y1="19" x2="13" y2="19"/><line x1="32" y1="11" x2="34" y2="9"/>
+        <line x1="16" y1="11" x2="14" y2="9"/>
+      </g>
+      <rect x="13" y="33" width="6" height="9" rx="1.5" fill="#E8663B"/>
+      <rect x="21" y="29" width="6" height="13" rx="1.5" fill="#2D7DD2"/>
+      <rect x="29" y="25" width="6" height="17" rx="1.5" fill="#2BB673"/>
+    </svg>
+    <div>
+      <h1>Home Solar Monitoring</h1>
+      <div class="sub" id="barsub">by MarkFold Digital</div>
+    </div>
+    <select id="ctxsel" style="display:none"></select>
+  </div>
+  <div class="wrap" id="app"></div>
+</div>
+
+<nav class="nav" id="nav">
+  <button data-v="dash" class="active"><span class="ic">▦</span>Dashboard</button>
+  <button data-v="read"><span class="ic">✎</span>Readings</button>
+  <button data-v="qtr"><span class="ic">▤</span>Quarterly</button>
+  <button data-v="set"><span class="ic">⚙</span>Setup</button>
+</nav>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SEED = {"meta":{"source":"Meter_Readings.xlsx","imported":"2026-06-27","version":1},"months":[{"name":"May25","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":25.9,"offpeak":40.25,"peak":54.35},"readings":[{"date":"2026-02-27","r1":1055.0,"r2":3429.0,"r3":5019.0},{"date":"2026-02-28","r1":1055.0,"r2":3429.0,"r3":5019.0},{"date":"2026-03-01","r1":1058.0,"r2":null,"r3":null},{"date":"2026-03-02","r1":null,"r2":null,"r3":null},{"date":"2026-03-03","r1":null,"r2":null,"r3":null},{"date":"2026-03-04","r1":null,"r2":null,"r3":null},{"date":"2026-03-05","r1":null,"r2":null,"r3":null},{"date":"2026-03-06","r1":null,"r2":null,"r3":null},{"date":"2026-03-07","r1":null,"r2":null,"r3":null},{"date":"2026-03-08","r1":null,"r2":null,"r3":null},{"date":"2026-03-09","r1":null,"r2":null,"r3":null},{"date":"2026-03-10","r1":null,"r2":null,"r3":null},{"date":"2026-03-11","r1":null,"r2":null,"r3":null},{"date":"2026-03-12","r1":null,"r2":null,"r3":null},{"date":"2026-03-13","r1":null,"r2":null,"r3":null},{"date":"2026-03-14","r1":null,"r2":null,"r3":null},{"date":"2026-03-15","r1":null,"r2":null,"r3":null},{"date":"2026-03-16","r1":null,"r2":null,"r3":null},{"date":"2026-03-17","r1":null,"r2":null,"r3":null},{"date":"2026-03-18","r1":null,"r2":null,"r3":null},{"date":"2026-03-19","r1":null,"r2":null,"r3":null},{"date":"2026-03-20","r1":null,"r2":null,"r3":null},{"date":"2026-03-21","r1":null,"r2":null,"r3":null},{"date":"2026-03-22","r1":null,"r2":null,"r3":null},{"date":"2026-03-23","r1":null,"r2":null,"r3":null},{"date":"2026-03-24","r1":null,"r2":null,"r3":null},{"date":"2026-03-25","r1":null,"r2":null,"r3":null},{"date":"2026-03-26","r1":null,"r2":null,"r3":null},{"date":"2026-03-27","r1":null,"r2":null,"r3":null},{"date":"2026-03-28","r1":null,"r2":null,"r3":null},{"date":"2026-03-29","r1":null,"r2":null,"r3":null},{"date":"2026-03-30","r1":null,"r2":null,"r3":null}]},{"name":"Jun25","meter_ref":"13146212227800","channels":["Ch1","Ch2","Ch3"],"rates":{"buyback":25.9,"offpeak":40.25,"peak":54.35},"readings":[]},{"name":"Jul25","meter_ref":"13146212227800","channels":["Import","Peak","Off-peak"],"rates":{"buyback":25.9,"offpeak":40.25,"peak":54.35},"readings":[{"date":"2025-06-27","r1":2431.0,"r2":528.0,"r3":1903.0},{"date":"2025-06-28","r1":2431.0,"r2":528.0,"r3":1903.0},{"date":"2025-06-29","r1":2431.0,"r2":528.0,"r3":1903.0},{"date":"2025-06-30","r1":2431.0,"r2":528.0,"r3":1903.0},{"date":"2025-07-01","r1":2431.0,"r2":528.0,"r3":1903.0},{"date":"2025-07-02","r1":2431.0,"r2":528.0,"r3":1903.0},{"date":"2025-07-03","r1":2584.0,"r2":559.0,"r3":2025.0},{"date":"2025-07-04","r1":2600.0,"r2":562.0,"r3":2038.0},{"date":"2025-07-05","r1":2610.0,"r2":567.0,"r3":2043.0},{"date":"2025-07-06","r1":2628.0,"r2":572.0,"r3":2055.0},{"date":"2025-07-07","r1":2637.0,"r2":574.0,"r3":2062.0},{"date":"2025-07-08","r1":2651.0,"r2":578.0,"r3":2072.0},{"date":"2025-07-09","r1":2661.0,"r2":581.0,"r3":2079.0},{"date":"2025-07-10","r1":2669.0,"r2":583.0,"r3":2085.0},{"date":"2025-07-11","r1":2678.0,"r2":586.0,"r3":2091.0},{"date":"2025-07-12","r1":2688.0,"r2":589.0,"r3":2098.0},{"date":"2025-07-13","r1":2699.0,"r2":591.0,"r3":2107.0},{"date":"2025-07-14","r1":2710.0,"r2":594.0,"r3":2115.0},{"date":"2025-07-15","r1":2710.0,"r2":594.0,"r3":2115.0},{"date":"2025-07-16","r1":2720.0,"r2":597.0,"r3":2122.0},{"date":"2025-07-17","r1":2729.0,"r2":599.0,"r3":2129.0},{"date":"2025-07-18","r1":2738.0,"r2":602.0,"r3":2135.0},{"date":"2025-07-19","r1":2746.0,"r2":605.0,"r3":2140.0},{"date":"2025-07-20","r1":2754.0,"r2":609.0,"r3":2144.0},{"date":"2025-07-21","r1":2762.0,"r2":610.0,"r3":2151.0},{"date":"2025-07-22","r1":2762.0,"r2":610.0,"r3":2151.0},{"date":"2025-07-23","r1":2784.0,"r2":617.0,"r3":2166.0},{"date":"2025-07-24","r1":2791.0,"r2":619.0,"r3":2171.0},{"date":"2025-07-25","r1":2798.0,"r2":621.0,"r3":2176.0},{"date":"2025-07-26","r1":2809.0,"r2":624.0,"r3":2184.0},{"date":"2025-07-27","r1":2820.0,"r2":627.0,"r3":2193.0}]},{"name":"Aug25","meter_ref":"13146212227800","channels":["Off-peak","Peak","Export"],"rates":{"buyback":25.4,"offpeak":40.25,"peak":46.57},"readings":[{"date":"2027-07-27","r1":2193.0,"r2":627.0,"r3":1635.0},{"date":"2027-07-28","r1":2193.0,"r2":627.0,"r3":1635.0},{"date":"2027-07-29","r1":2220.0,"r2":633.0,"r3":1679.0},{"date":"2027-07-30","r1":2230.0,"r2":636.0,"r3":1689.0},{"date":"2027-07-31","r1":2236.0,"r2":639.0,"r3":1712.0},{"date":"2027-08-01","r1":2236.0,"r2":639.0,"r3":1712.0},{"date":"2027-08-02","r1":2260.0,"r2":647.0,"r3":1748.0},{"date":"2027-08-03","r1":2266.0,"r2":649.0,"r3":1775.0},{"date":"2027-08-04","r1":2272.0,"r2":652.0,"r3":1800.0},{"date":"2027-08-05","r1":2280.0,"r2":654.0,"r3":1822.0},{"date":"2027-08-06","r1":2289.0,"r2":657.0,"r3":1844.0},{"date":"2027-08-07","r1":2302.0,"r2":663.0,"r3":1867.0},{"date":"2027-08-08","r1":2307.0,"r2":665.0,"r3":1886.0},{"date":"2027-08-09","r1":2307.0,"r2":665.0,"r3":1886.0},{"date":"2027-08-10","r1":2307.0,"r2":665.0,"r3":1886.0},{"date":"2027-08-11","r1":2318.0,"r2":670.0,"r3":1923.0},{"date":"2027-08-12","r1":2331.0,"r2":672.0,"r3":1937.0},{"date":"2027-08-13","r1":2347.0,"r2":676.0,"r3":1945.0},{"date":"2027-08-14","r1":2365.0,"r2":679.0,"r3":1952.0},{"date":"2027-08-15","r1":2383.0,"r2":686.0,"r3":1960.0},{"date":"2027-08-16","r1":2396.0,"r2":697.0,"r3":1980.0},{"date":"2027-08-17","r1":2417.0,"r2":703.0,"r3":1996.0},{"date":"2027-08-18","r1":2417.0,"r2":703.0,"r3":1996.0},{"date":"2027-08-19","r1":2426.0,"r2":707.0,"r3":2009.0},{"date":"2027-08-20","r1":2431.0,"r2":709.0,"r3":2027.0},{"date":"2027-08-21","r1":2438.0,"r2":712.0,"r3":2053.0},{"date":"2027-08-22","r1":2443.0,"r2":713.0,"r3":2079.0},{"date":"2027-08-23","r1":2451.0,"r2":715.0,"r3":2098.0},{"date":"2027-08-24","r1":2454.0,"r2":717.0,"r3":2121.0},{"date":"2027-08-25","r1":2457.0,"r2":719.0,"r3":2149.0},{"date":"2027-08-26","r1":2461.0,"r2":722.0,"r3":2174.0},{"date":"2027-08-27","r1":2462.0,"r2":724.0,"r3":2182.0}]},{"name":"Sep25","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":25.4,"offpeak":40.25,"peak":46.57},"readings":[{"date":"2025-08-27","r1":724.0,"r2":2462.0,"r3":2182.0},{"date":"2025-08-28","r1":725.0,"r2":2468.0,"r3":2203.0},{"date":"2025-08-29","r1":730.0,"r2":2471.0,"r3":2245.0},{"date":"2025-08-30","r1":735.0,"r2":2476.0,"r3":2257.0},{"date":"2025-08-31","r1":737.0,"r2":2481.0,"r3":2278.0},{"date":"2025-09-01","r1":739.0,"r2":2486.0,"r3":2305.0},{"date":"2025-09-02","r1":739.0,"r2":2486.0,"r3":2305.0},{"date":"2025-09-03","r1":748.0,"r2":2502.0,"r3":2341.0},{"date":"2025-09-04","r1":753.0,"r2":2516.0,"r3":2380.0},{"date":"2025-09-05","r1":753.0,"r2":2516.0,"r3":2380.0},{"date":"2025-09-06","r1":758.0,"r2":2535.0,"r3":2407.0},{"date":"2025-09-07","r1":760.0,"r2":2538.0,"r3":2411.0},{"date":"2025-09-08","r1":760.0,"r2":2538.0,"r3":2411.0},{"date":"2025-09-09","r1":763.0,"r2":2545.0,"r3":2449.0},{"date":"2025-09-10","r1":763.0,"r2":2545.0,"r3":2449.0},{"date":"2025-09-11","r1":763.0,"r2":2545.0,"r3":2449.0},{"date":"2025-09-12","r1":766.0,"r2":2551.0,"r3":2499.0},{"date":"2025-09-13","r1":766.0,"r2":2551.0,"r3":2499.0},{"date":"2025-09-14","r1":770.0,"r2":2561.0,"r3":2542.0},{"date":"2025-09-15","r1":770.0,"r2":2561.0,"r3":2542.0},{"date":"2025-09-16","r1":770.0,"r2":2561.0,"r3":2542.0},{"date":"2025-09-17","r1":775.0,"r2":2574.0,"r3":2597.0},{"date":"2025-09-18","r1":775.0,"r2":2574.0,"r3":2597.0},{"date":"2025-09-19","r1":779.0,"r2":2585.0,"r3":2626.0},{"date":"2025-09-20","r1":781.0,"r2":2590.0,"r3":2628.0},{"date":"2025-09-21","r1":781.0,"r2":2590.0,"r3":2628.0},{"date":"2025-09-22","r1":781.0,"r2":2590.0,"r3":2628.0},{"date":"2025-09-23","r1":786.0,"r2":2600.0,"r3":2715.0},{"date":"2025-09-24","r1":786.0,"r2":2600.0,"r3":2715.0},{"date":"2025-09-25","r1":789.0,"r2":2607.0,"r3":2761.0},{"date":"2025-09-26","r1":789.0,"r2":2607.0,"r3":2761.0},{"date":"2025-09-27","r1":793.0,"r2":2614.0,"r3":2806.0}]},{"name":"Oct25","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.25,"peak":50.46},"readings":[{"date":"2025-09-27","r1":793.0,"r2":2613.0,"r3":2788.0},{"date":"2025-09-28","r1":793.0,"r2":2613.0,"r3":2788.0},{"date":"2025-09-29","r1":796.0,"r2":2621.0,"r3":2854.0},{"date":"2025-09-30","r1":796.0,"r2":2621.0,"r3":2854.0},{"date":"2025-10-01","r1":796.0,"r2":2621.0,"r3":2854.0},{"date":"2025-10-02","r1":796.0,"r2":2621.0,"r3":2854.0},{"date":"2025-10-03","r1":802.0,"r2":2638.0,"r3":2900.0},{"date":"2025-10-04","r1":802.0,"r2":2638.0,"r3":2900.0},{"date":"2025-10-05","r1":802.0,"r2":2638.0,"r3":2900.0},{"date":"2025-10-06","r1":802.0,"r2":2638.0,"r3":2900.0},{"date":"2025-10-07","r1":808.0,"r2":2656.0,"r3":2951.0},{"date":"2025-10-08","r1":808.0,"r2":2656.0,"r3":2951.0},{"date":"2025-10-09","r1":808.0,"r2":2656.0,"r3":2951.0},{"date":"2025-10-10","r1":812.0,"r2":2664.0,"r3":2991.0},{"date":"2025-10-11","r1":812.0,"r2":2664.0,"r3":2991.0},{"date":"2025-10-12","r1":812.0,"r2":2664.0,"r3":2991.0},{"date":"2025-10-13","r1":817.0,"r2":2673.0,"r3":3064.0},{"date":"2025-10-14","r1":818.0,"r2":2678.0,"r3":3087.0},{"date":"2025-10-15","r1":820.0,"r2":2681.0,"r3":3101.0},{"date":"2025-10-16","r1":820.0,"r2":2681.0,"r3":3101.0},{"date":"2025-10-17","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-18","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-19","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-20","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-21","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-22","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-23","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-24","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-25","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-26","r1":822.0,"r2":2687.0,"r3":3149.0},{"date":"2025-10-27","r1":833.0,"r2":2711.0,"r3":3333.0}]},{"name":"Nov25","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.25,"peak":50.46},"readings":[{"date":"2025-10-27","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-10-28","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-10-29","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-10-30","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-10-31","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-01","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-02","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-03","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-04","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-05","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-06","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-07","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-08","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-09","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-10","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-11","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-12","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-13","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-14","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-15","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-16","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-17","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-18","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-19","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-20","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-21","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-22","r1":833.0,"r2":2711.0,"r3":3333.0},{"date":"2025-11-23","r1":872.0,"r2":2822.0,"r3":3745.0},{"date":"2025-11-24","r1":872.0,"r2":2822.0,"r3":3745.0},{"date":"2025-11-25","r1":872.0,"r2":2822.0,"r3":3745.0},{"date":"2025-11-26","r1":872.0,"r2":2822.0,"r3":3745.0},{"date":"2025-11-27","r1":879.0,"r2":2836.0,"r3":3797.0}]},{"name":"Dec25","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.25,"peak":54.35},"readings":[{"date":"2025-11-27","r1":879.0,"r2":2836.0,"r3":3797.0},{"date":"2025-11-28","r1":879.0,"r2":2836.0,"r3":3797.0},{"date":"2025-11-29","r1":885.0,"r2":2850.0,"r3":3834.0},{"date":"2025-11-30","r1":887.0,"r2":2855.0,"r3":3847.0},{"date":"2025-12-01","r1":887.0,"r2":2855.0,"r3":3847.0},{"date":"2025-12-02","r1":887.0,"r2":2855.0,"r3":3847.0},{"date":"2025-12-03","r1":887.0,"r2":2855.0,"r3":3847.0},{"date":"2025-12-04","r1":893.0,"r2":2871.0,"r3":3887.0},{"date":"2025-12-05","r1":893.0,"r2":2871.0,"r3":3887.0},{"date":"2025-12-06","r1":896.0,"r2":2882.0,"r3":3914.0},{"date":"2025-12-07","r1":896.0,"r2":2882.0,"r3":3914.0},{"date":"2025-12-08","r1":896.0,"r2":2882.0,"r3":3914.0},{"date":"2025-12-09","r1":896.0,"r2":2882.0,"r3":3914.0},{"date":"2025-12-10","r1":905.0,"r2":2896.0,"r3":3973.0},{"date":"2025-12-11","r1":905.0,"r2":2896.0,"r3":3973.0},{"date":"2025-12-12","r1":908.0,"r2":2902.0,"r3":4002.0},{"date":"2025-12-13","r1":910.0,"r2":2906.0,"r3":4011.0},{"date":"2025-12-14","r1":910.0,"r2":2906.0,"r3":4011.0},{"date":"2025-12-15","r1":912.0,"r2":2915.0,"r3":4027.0},{"date":"2025-12-16","r1":913.0,"r2":2919.0,"r3":4038.0},{"date":"2025-12-17","r1":915.0,"r2":2922.0,"r3":4051.0},{"date":"2025-12-18","r1":915.0,"r2":2922.0,"r3":4051.0},{"date":"2025-12-19","r1":917.0,"r2":2929.0,"r3":4070.0},{"date":"2025-12-20","r1":917.0,"r2":2929.0,"r3":4070.0},{"date":"2025-12-21","r1":917.0,"r2":2929.0,"r3":4070.0},{"date":"2025-12-22","r1":917.0,"r2":2929.0,"r3":4070.0},{"date":"2025-12-23","r1":917.0,"r2":2929.0,"r3":4070.0},{"date":"2025-12-24","r1":923.0,"r2":2954.0,"r3":4100.0},{"date":"2025-12-25","r1":924.0,"r2":2957.0,"r3":4118.0},{"date":"2025-12-26","r1":924.0,"r2":2957.0,"r3":4118.0},{"date":"2025-12-27","r1":927.0,"r2":2975.0,"r3":4151.0},{"date":"2025-12-28","r1":929.0,"r2":2977.0,"r3":4151.0}]},{"name":"Jan26","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.25,"peak":54.35},"readings":[{"date":"2025-12-27","r1":929.0,"r2":2977.0,"r3":4151.0},{"date":"2025-12-28","r1":929.0,"r2":2977.0,"r3":4151.0},{"date":"2025-12-29","r1":934.0,"r2":2988.0,"r3":4170.0},{"date":"2025-12-30","r1":941.0,"r2":2995.0,"r3":4179.0},{"date":"2025-12-31","r1":944.0,"r2":3003.0,"r3":4182.0},{"date":"2026-01-01","r1":944.0,"r2":3003.0,"r3":4182.0},{"date":"2026-01-02","r1":949.0,"r2":3025.0,"r3":4191.0},{"date":"2026-01-03","r1":950.0,"r2":3032.0,"r3":4194.0},{"date":"2026-01-04","r1":950.0,"r2":3032.0,"r3":4194.0},{"date":"2026-01-05","r1":952.0,"r2":3050.0,"r3":4218.0},{"date":"2026-01-06","r1":952.0,"r2":3050.0,"r3":4218.0},{"date":"2026-01-07","r1":959.0,"r2":3064.0,"r3":4245.0},{"date":"2026-01-08","r1":959.0,"r2":3064.0,"r3":4245.0},{"date":"2026-01-09","r1":962.0,"r2":3071.0,"r3":4271.0},{"date":"2026-01-10","r1":963.0,"r2":3077.0,"r3":4290.0},{"date":"2026-01-11","r1":967.0,"r2":3086.0,"r3":4310.0},{"date":"2026-01-12","r1":967.0,"r2":3086.0,"r3":4310.0},{"date":"2026-01-13","r1":970.0,"r2":3098.0,"r3":4323.0},{"date":"2026-01-14","r1":970.0,"r2":3098.0,"r3":4323.0},{"date":"2026-01-15","r1":972.0,"r2":3114.0,"r3":4353.0},{"date":"2026-01-16","r1":973.0,"r2":3117.0,"r3":4368.0},{"date":"2026-01-17","r1":975.0,"r2":3130.0,"r3":4373.0},{"date":"2026-01-18","r1":975.0,"r2":3130.0,"r3":4373.0},{"date":"2026-01-19","r1":977.0,"r2":3143.0,"r3":4400.0},{"date":"2026-01-20","r1":977.0,"r2":3143.0,"r3":4400.0},{"date":"2026-01-21","r1":977.0,"r2":3143.0,"r3":4400.0},{"date":"2026-01-22","r1":977.0,"r2":3143.0,"r3":4400.0},{"date":"2026-01-23","r1":986.0,"r2":3179.0,"r3":4432.0},{"date":"2026-01-24","r1":986.0,"r2":3179.0,"r3":4432.0},{"date":"2026-01-25","r1":989.0,"r2":3194.0,"r3":4468.0},{"date":"2026-01-26","r1":989.0,"r2":3194.0,"r3":4468.0},{"date":"2026-01-27","r1":998.0,"r2":3205.0,"r3":4474.0}]},{"name":"Feb26","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":25.9,"offpeak":40.25,"peak":54.35},"readings":[{"date":"2026-01-27","r1":998.0,"r2":3205.0,"r3":4474.0},{"date":"2026-01-28","r1":998.0,"r2":3205.0,"r3":4474.0},{"date":"2026-01-29","r1":1001.0,"r2":3231.0,"r3":4517.0},{"date":"2026-01-30","r1":1002.0,"r2":3236.0,"r3":4529.0},{"date":"2026-01-31","r1":1002.0,"r2":3236.0,"r3":4529.0},{"date":"2026-02-01","r1":1006.0,"r2":3246.0,"r3":4561.0},{"date":"2026-02-02","r1":1006.0,"r2":3246.0,"r3":4561.0},{"date":"2026-02-03","r1":1006.0,"r2":3246.0,"r3":4561.0},{"date":"2026-02-04","r1":1011.0,"r2":3254.0,"r3":4594.0},{"date":"2026-02-05","r1":1011.0,"r2":3254.0,"r3":4594.0},{"date":"2026-02-06","r1":1012.0,"r2":3263.0,"r3":4643.0},{"date":"2026-02-07","r1":1012.0,"r2":3263.0,"r3":4643.0},{"date":"2026-02-08","r1":1016.0,"r2":3285.0,"r3":4678.0},{"date":"2026-02-09","r1":1019.0,"r2":3290.0,"r3":4678.0},{"date":"2026-02-10","r1":1021.0,"r2":3308.0,"r3":4693.0},{"date":"2026-02-11","r1":1022.0,"r2":3315.0,"r3":4708.0},{"date":"2026-02-12","r1":1024.0,"r2":3324.0,"r3":4716.0},{"date":"2026-02-13","r1":1025.0,"r2":3334.0,"r3":4756.0},{"date":"2026-02-14","r1":1025.0,"r2":3334.0,"r3":4756.0},{"date":"2026-02-15","r1":1029.0,"r2":3343.0,"r3":4784.0},{"date":"2026-02-16","r1":1029.0,"r2":3343.0,"r3":4784.0},{"date":"2026-02-17","r1":1029.0,"r2":3343.0,"r3":4784.0},{"date":"2026-02-18","r1":1036.0,"r2":3367.0,"r3":4857.0},{"date":"2026-02-19","r1":1038.0,"r2":3373.0,"r3":4877.0},{"date":"2026-02-20","r1":1038.0,"r2":3373.0,"r3":4877.0},{"date":"2026-02-21","r1":1042.0,"r2":3389.0,"r3":4900.0},{"date":"2026-02-22","r1":1044.0,"r2":3393.0,"r3":4943.0},{"date":"2026-02-23","r1":1044.0,"r2":3393.0,"r3":4943.0},{"date":"2026-02-24","r1":1050.0,"r2":3403.0,"r3":4983.0},{"date":"2026-02-25","r1":1051.0,"r2":3419.0,"r3":5002.0},{"date":"2026-02-26","r1":1053.0,"r2":3425.0,"r3":5002.0},{"date":"2026-02-27","r1":1055.0,"r2":3429.0,"r3":5018.0}]},{"name":"Mar26","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":25.9,"offpeak":44.4,"peak":55.1},"readings":[{"date":"2026-02-27","r1":1055.0,"r2":3429.0,"r3":5019.0},{"date":"2026-02-28","r1":1055.0,"r2":3429.0,"r3":5019.0},{"date":"2026-03-01","r1":1058.0,"r2":3429.0,"r3":5019.0},{"date":"2026-03-02","r1":1061.0,"r2":3447.0,"r3":5092.0},{"date":"2026-03-03","r1":1061.0,"r2":3447.0,"r3":5092.0},{"date":"2026-03-04","r1":1066.0,"r2":3459.0,"r3":5143.0},{"date":"2026-03-05","r1":1066.0,"r2":3459.0,"r3":5143.0},{"date":"2026-03-06","r1":1066.0,"r2":3459.0,"r3":5143.0},{"date":"2026-03-07","r1":1066.0,"r2":3459.0,"r3":5143.0},{"date":"2026-03-08","r1":1075.0,"r2":3475.0,"r3":5214.0},{"date":"2026-03-09","r1":1077.0,"r2":3478.0,"r3":5240.0},{"date":"2026-03-10","r1":1078.0,"r2":3482.0,"r3":5253.0},{"date":"2026-03-11","r1":1080.0,"r2":3486.0,"r3":5259.0},{"date":"2026-03-12","r1":1082.0,"r2":3490.0,"r3":5275.0},{"date":"2026-03-13","r1":1084.0,"r2":3493.0,"r3":5298.0},{"date":"2026-03-14","r1":1086.0,"r2":3500.0,"r3":5324.0},{"date":"2026-03-15","r1":1088.0,"r2":3504.0,"r3":5352.0},{"date":"2026-03-16","r1":1090.0,"r2":3510.0,"r3":5360.0},{"date":"2026-03-17","r1":1090.0,"r2":3510.0,"r3":5360.0},{"date":"2026-03-18","r1":1090.0,"r2":3510.0,"r3":5360.0},{"date":"2026-03-19","r1":1090.0,"r2":3510.0,"r3":5360.0},{"date":"2026-03-20","r1":1090.0,"r2":3510.0,"r3":5360.0},{"date":"2026-03-21","r1":1104.0,"r2":3510.0,"r3":5444.0},{"date":"2026-03-22","r1":1104.0,"r2":3510.0,"r3":5444.0},{"date":"2026-03-23","r1":1104.0,"r2":3510.0,"r3":5444.0},{"date":"2026-03-24","r1":1104.0,"r2":3510.0,"r3":5444.0},{"date":"2026-03-25","r1":1110.0,"r2":3577.0,"r3":5534.0},{"date":"2026-03-26","r1":1110.0,"r2":3577.0,"r3":5534.0},{"date":"2026-03-27","r1":1116.0,"r2":3592.0,"r3":5570.0}]},{"name":"Apr26","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.75,"peak":55.3},"readings":[{"date":"2026-03-27","r1":1116.0,"r2":3592.0,"r3":5570.0},{"date":"2026-03-28","r1":1116.0,"r2":3592.0,"r3":5570.0},{"date":"2026-03-29","r1":1120.0,"r2":3604.0,"r3":5621.0},{"date":"2026-03-30","r1":1120.0,"r2":3604.0,"r3":5621.0},{"date":"2026-03-31","r1":1120.0,"r2":3604.0,"r3":5621.0},{"date":"2026-04-01","r1":1125.0,"r2":3620.0,"r3":5667.0},{"date":"2026-04-02","r1":1128.0,"r2":3626.0,"r3":5689.0},{"date":"2026-04-03","r1":1130.0,"r2":3636.0,"r3":5707.0},{"date":"2026-04-04","r1":1132.0,"r2":3640.0,"r3":5714.0},{"date":"2026-04-05","r1":1137.0,"r2":3646.0,"r3":5721.0},{"date":"2026-04-06","r1":1138.0,"r2":3650.0,"r3":5753.0},{"date":"2026-04-07","r1":1138.0,"r2":3650.0,"r3":5753.0},{"date":"2026-04-08","r1":1138.0,"r2":3650.0,"r3":5753.0},{"date":"2026-04-09","r1":1143.0,"r2":3667.0,"r3":5795.0},{"date":"2026-04-10","r1":1143.0,"r2":3667.0,"r3":5795.0},{"date":"2026-04-11","r1":1147.0,"r2":3687.0,"r3":5847.0},{"date":"2026-04-12","r1":1148.0,"r2":3690.0,"r3":5868.0},{"date":"2026-04-13","r1":1149.0,"r2":3693.0,"r3":5900.0},{"date":"2026-04-14","r1":1151.0,"r2":3701.0,"r3":5932.0},{"date":"2026-04-15","r1":1151.0,"r2":3701.0,"r3":5932.0},{"date":"2026-04-16","r1":1151.0,"r2":3701.0,"r3":5932.0},{"date":"2026-04-17","r1":1155.0,"r2":3716.0,"r3":6015.0},{"date":"2026-04-18","r1":1155.0,"r2":3716.0,"r3":6015.0},{"date":"2026-04-19","r1":1155.0,"r2":3716.0,"r3":6015.0},{"date":"2026-04-20","r1":1155.0,"r2":3716.0,"r3":6015.0},{"date":"2026-04-21","r1":1155.0,"r2":3716.0,"r3":6015.0},{"date":"2026-04-22","r1":1161.0,"r2":3735.0,"r3":6142.0},{"date":"2026-04-23","r1":1161.0,"r2":3735.0,"r3":6142.0},{"date":"2026-04-24","r1":1161.0,"r2":3735.0,"r3":6142.0},{"date":"2026-04-25","r1":1165.0,"r2":3747.0,"r3":6221.0},{"date":"2026-04-26","r1":1165.0,"r2":3747.0,"r3":6221.0},{"date":"2026-04-27","r1":1168.0,"r2":3758.0,"r3":6265.0}]},{"name":"May26","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.75,"peak":55.3},"readings":[{"date":"2026-04-27","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-04-28","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-04-29","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-04-30","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-01","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-02","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-03","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-04","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-05","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-06","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-07","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-08","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-09","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-10","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-11","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-12","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-13","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-14","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-15","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-16","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-17","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-18","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-19","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-20","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-21","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-22","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-23","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-24","r1":1168.0,"r2":3758.0,"r3":6265.0},{"date":"2026-05-25","r1":1231.0,"r2":3939.0,"r3":6867.0},{"date":"2026-05-26","r1":1232.0,"r2":3944.0,"r3":6926.0},{"date":"2026-05-27","r1":1243.0,"r2":3975.0,"r3":6962.0}]},{"name":"Jun26","meter_ref":"13146212227800","channels":["Peak","Off-peak","Export"],"rates":{"buyback":27.0,"offpeak":40.75,"peak":55.3},"readings":[{"date":"2026-05-27","r1":1243.0,"r2":3975.0,"r3":6962.0},{"date":"2026-05-28","r1":1243.0,"r2":3975.0,"r3":6962.0},{"date":"2026-05-29","r1":1243.0,"r2":3975.0,"r3":6962.0},{"date":"2026-05-30","r1":1253.0,"r2":3995.0,"r3":6983.0},{"date":"2026-05-31","r1":1255.0,"r2":3999.0,"r3":7009.0},{"date":"2026-06-01","r1":1257.0,"r2":4004.0,"r3":7032.0},{"date":"2026-06-02","r1":1260.0,"r2":4016.0,"r3":7052.0},{"date":"2026-06-03","r1":1262.0,"r2":4022.0,"r3":7073.0},{"date":"2026-06-04","r1":1264.0,"r2":4027.0,"r3":7098.0},{"date":"2026-06-05","r1":1267.0,"r2":4035.0,"r3":7100.0},{"date":"2026-06-06","r1":1269.0,"r2":4040.0,"r3":7126.0},{"date":"2026-06-07","r1":1272.0,"r2":4046.0,"r3":7153.0},{"date":"2026-06-08","r1":1274.0,"r2":4054.0,"r3":7178.0},{"date":"2026-06-09","r1":1279.0,"r2":4063.0,"r3":7207.0},{"date":"2026-06-10","r1":1282.0,"r2":4075.0,"r3":7233.0},{"date":"2026-06-11","r1":1284.0,"r2":4084.0,"r3":7259.0},{"date":"2026-06-12","r1":1297.0,"r2":4097.0,"r3":7285.0},{"date":"2026-06-13","r1":1301.0,"r2":4120.0,"r3":7301.0},{"date":"2026-06-14","r1":1304.0,"r2":4132.0,"r3":7324.0},{"date":"2026-06-15","r1":1307.0,"r2":4141.0,"r3":7350.0},{"date":"2026-06-16","r1":1312.0,"r2":4165.0,"r3":7367.0},{"date":"2026-06-17","r1":1319.0,"r2":4185.0,"r3":7385.0},{"date":"2026-06-18","r1":1322.0,"r2":4198.0,"r3":7407.0},{"date":"2026-06-19","r1":1326.0,"r2":4217.0,"r3":7428.0},{"date":"2026-06-20","r1":1329.0,"r2":4229.0,"r3":7447.0},{"date":"2026-06-21","r1":1332.0,"r2":4243.0,"r3":7471.0},{"date":"2026-06-22","r1":1335.0,"r2":4257.0,"r3":7489.0},{"date":"2026-06-23","r1":1338.0,"r2":4265.0,"r3":7504.0},{"date":"2026-06-24","r1":1342.0,"r2":4279.0,"r3":7530.0},{"date":"2026-06-25","r1":1346.0,"r2":4302.0,"r3":7554.0},{"date":"2026-06-26","r1":1349.0,"r2":4314.0,"r3":7569.0},{"date":"2026-06-27","r1":1355.0,"r2":4331.0,"r3":7589.0}]}],"summary":[{"month":"2025-04","peak":{"open":262.0,"close":313.0,"net":51.0},"offpeak":{"open":958.0,"close":1146.0,"net":188.0},"export":{"open":0.0,"close":0.0,"net":0.0},"saving":null},{"month":"2025-05","peak":{"open":313.0,"close":381.0,"net":68.0},"offpeak":{"open":1146.0,"close":1383.0,"net":237.0},"export":{"open":0.0,"close":487.0,"net":487.0},"saving":20168.15},{"month":"2025-06","peak":{"open":381.0,"close":528.0,"net":147.0},"offpeak":{"open":1383.0,"close":1903.0,"net":520.0},"export":{"open":487.0,"close":1139.0,"net":652.0},"saving":32883.1},{"month":"2025-07","peak":{"open":528.0,"close":627.0,"net":99.0},"offpeak":{"open":1903.0,"close":2193.0,"net":290.0},"export":{"open":1139.0,"close":1635.0,"net":496.0},"saving":22854.2},{"month":"2025-08","peak":{"open":627.0,"close":724.0,"net":97.0},"offpeak":{"open":2193.0,"close":2462.0,"net":269.0},"export":{"open":1635.0,"close":2182.0,"net":547.0},"saving":23831.85},{"month":"2025-09","peak":{"open":724.0,"close":793.0,"net":69.0},"offpeak":{"open":2462.0,"close":2613.0,"net":151.0},"export":{"open":2182.0,"close":2788.0,"net":606.0},"saving":22253.95},{"month":"2025-10","peak":{"open":793.0,"close":833.0,"net":40.0},"offpeak":{"open":2613.0,"close":2711.0,"net":98.0},"export":{"open":2788.0,"close":3332.0,"net":544.0},"saving":18247.5},{"month":"2025-11","peak":{"open":833.0,"close":879.0,"net":46.0},"offpeak":{"open":2711.0,"close":2836.0,"net":125.0},"export":{"open":3332.0,"close":3797.0,"net":465.0},"saving":16817.55},{"month":"2025-12","peak":{"open":879.0,"close":929.0,"net":50.0},"offpeak":{"open":2836.0,"close":2977.0,"net":141.0},"export":{"open":3797.0,"close":4151.0,"net":354.0},"saving":14261.75},{"month":"2026-01","peak":{"open":929.0,"close":998.0,"net":69.0},"offpeak":{"open":2977.0,"close":3205.0,"net":228.0},"export":{"open":4151.0,"close":4475.0,"net":324.0},"saving":15698.7},{"month":"2026-02","peak":{"open":998.0,"close":1055.0,"net":57.0},"offpeak":{"open":3205.0,"close":3429.0,"net":224.0},"export":{"open":4475.0,"close":5019.0,"net":544.0},"saving":20920.1},{"month":"2026-03","peak":{"open":1055.0,"close":1116.0,"net":61.0},"offpeak":{"open":3429.0,"close":3592.0,"net":163.0},"export":{"open":5019.0,"close":5570.0,"net":551.0},"saving":20491.55},{"month":"2026-04","peak":{"open":1116.0,"close":1168.0,"net":52.0},"offpeak":{"open":3592.0,"close":3758.0,"net":166.0},"export":{"open":5570.0,"close":6265.0,"net":695.0},"saving":23923.1},{"month":"2026-05","peak":{"open":1168.0,"close":1243.0,"net":75.0},"offpeak":{"open":3758.0,"close":3975.0,"net":217.0},"export":{"open":6265.0,"close":6962.0,"net":697.0},"saving":25950.25},{"month":"2026-06","peak":{"open":1243.0,"close":1355.0,"net":112.0},"offpeak":{"open":3975.0,"close":4331.0,"net":356.0},"export":{"open":6962.0,"close":7589.0,"net":627.0},"saving":28017.6}]};
+const KEY = "metercrm_v1";
+const MA = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+let DB = load();
+let view = "dash";
+let curMonth = lastMonthName();
+let curQ = null;
+
+function load(){ try{const s=localStorage.getItem(KEY); return s?JSON.parse(s):clone(SEED);}catch(e){return clone(SEED);} }
+function save(){ try{localStorage.setItem(KEY, JSON.stringify(DB));}catch(e){} }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function nf(n){ return (n==null||isNaN(n))?"":Number(n).toLocaleString("en-US",{maximumFractionDigits:0}); }
+function lastMonthName(){ const m=(SEED.months||[]); return m.length?m[m.length-1].name:null; }
+function monthByName(n){ return DB.months.find(m=>m.name===n); }
+
+function computeUnits(reads){
+  let prev={r1:null,r2:null,r3:null}, out=[];
+  for(const row of reads){
+    let u={};
+    for(const k of ["r1","r2","r3"]){
+      const cur=row[k], pv=prev[k];
+      u[k]=(typeof cur==="number"&&typeof pv==="number"&&cur>=pv)?cur-pv:null;
+      if(typeof cur==="number") prev[k]=cur;
+    }
+    out.push({...row,u1:u.r1,u2:u.r2,u3:u.r3});
+  }
+  return out;
+}
+function monthTotals(m){
+  const r=computeUnits(m.readings||[]); let t=[0,0,0];
+  for(const x of r){ if(typeof x.u1==="number")t[0]+=x.u1; if(typeof x.u2==="number")t[1]+=x.u2; if(typeof x.u3==="number")t[2]+=x.u3; }
+  return t;
+}
+function nameToYm(name){
+  name=(name||"").trim();
+  for(let i=1;i<MA.length;i++){ if(name.toLowerCase().startsWith(MA[i].toLowerCase())){
+    const yy=name.slice(MA[i].length).replace(/\D/g,""); if(yy.length===2) return "20"+yy+"-"+String(i).padStart(2,"0");
+  }}
+  return null;
+}
+function ratesForYm(ym){
+  if(!ym) return {};
+  const [y,mo]=ym.split("-"); const nm=MA[+mo]+y.slice(2); const m=monthByName(nm);
+  return m?(m.rates||{}):{};
+}
+function actualSaving(ym){ const s=(DB.summary||[]).find(x=>x.month===ym); return s?s.saving:null; }
+function quarterLabel(ym){ const [y,mo]=ym.split("-"); return y+"-Q"+(Math.floor((+mo-1)/3)+1); }
+function groupQuarters(){
+  const out={}, order=[];
+  for(const s of (DB.summary||[])){ const q=quarterLabel(s.month); if(!out[q]){out[q]=[];order.push(q);} out[q].push(s); }
+  return order.map(q=>[q,out[q]]);
+}
+function settlement(peak,off,exp,rates){
+  const bb=rates.buyback, pr=rates.peak;
+  if(bb==null||pr==null) return null;
+  const credit=(exp-off)*bb, peakCost=peak*pr;
+  return {val:credit-peakCost, credit, peakCost, bb, pr};
+}
+
+// map a month's 3 channel labels to canonical {peak,offpeak,export} column indexes
+function canonMap(ch){
+  let map={};
+  (ch||[]).forEach((label,i)=>{
+    const l=(label||"").toLowerCase(); let key=null;
+    if(l.includes("export")) key="export";
+    else if(l.includes("off")) key="offpeak";
+    else if(l.includes("peak")) key="peak";
+    else if(l.includes("import")) key="peak";
+    if(key && !(key in map)) map[key]=i;
+  });
+  return ("peak" in map && "offpeak" in map && "export" in map) ? map : null;
+}
+
+// recompute a month's entry in DB.summary from its daily readings (called on every edit)
+function syncSummary(m){
+  if(!m) return;
+  const ym=nameToYm(m.name); if(!ym) return;
+  if(!DB.summary) DB.summary=[];
+  let entry=DB.summary.find(s=>s.month===ym);
+  const cm=canonMap(m.channels||[]);
+  const t=monthTotals(m); // [ch0,ch1,ch2]
+  const reads=m.readings||[];
+  const lastR=i=>{const k=["r1","r2","r3"][i]; for(let j=reads.length-1;j>=0;j--){ if(typeof reads[j][k]==="number") return reads[j][k]; } return null;};
+  let nets,closes;
+  if(cm){ nets={peak:t[cm.peak],offpeak:t[cm.offpeak],export:t[cm.export]};
+          closes={peak:lastR(cm.peak),offpeak:lastR(cm.offpeak),export:lastR(cm.export)}; }
+  else  { nets={peak:t[0],offpeak:t[1],export:t[2]};
+          closes={peak:lastR(0),offpeak:lastR(1),export:lastR(2)}; }
+  // don't wipe a good historical entry with empty/placeholder readings
+  if(entry && (entry.peak.net||entry.offpeak.net||entry.export.net) &&
+     !(nets.peak||nets.offpeak||nets.export)) return;
+  if(!entry){ entry={month:ym,saving:null}; DB.summary.push(entry); }
+  const prevSaving=entry.saving;
+  entry.peak   ={net:nets.peak,   close:closes.peak};
+  entry.offpeak={net:nets.offpeak,close:closes.offpeak};
+  entry.export ={net:nets.export, close:closes.export};
+  if(prevSaving==null){ const st=settlement(nets.peak,nets.offpeak,nets.export,m.rates||{}); entry.saving=st?Math.round(st.val):null; }
+  else entry.saving=prevSaving;
+  DB.summary.sort((a,b)=>a.month<b.month?-1:1);
+}
+
+/* ---------- views ---------- */
+function render(){
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.v===view));
+  const app=document.getElementById("app");
+  if(view==="dash") app.innerHTML=vDash();
+  else if(view==="read") app.innerHTML=vRead();
+  else if(view==="qtr") app.innerHTML=vQtr();
+  else if(view==="set") app.innerHTML=vSet();
+  bindCtx();
+  if(view==="dash") drawChart();
+}
+
+function ctxBar(html){ const s=document.getElementById("ctxsel"); if(html){s.style.display="";s.innerHTML=html;} else {s.style.display="none";s.innerHTML="";} }
+function bindCtx(){
+  const s=document.getElementById("ctxsel");
+  s.onchange=()=>{
+    if(view==="dash"||view==="read") curMonth=s.value;
+    else if(view==="qtr") curQ=s.value;
+    render();
+  };
+}
+
+function vDash(){
+  const names=DB.months.map(m=>m.name);
+  if(!names.length) return empty("No data yet. Add a month under Setup.");
+  if(!names.includes(curMonth)) curMonth=names[names.length-1];
+  ctxBar(names.map(n=>`<option ${n===curMonth?"selected":""}>${n}</option>`).join(""));
+  document.getElementById("barsub").textContent = monthByName(curMonth).meter_ref ? ("Meter "+monthByName(curMonth).meter_ref) : "by MarkFold Digital";
+  const m=monthByName(curMonth), ch=m.channels||["Ch1","Ch2","Ch3"], t=monthTotals(m);
+  const ym=nameToYm(m.name), act=actualSaving(ym);
+  const cc=["var(--c1)","var(--c2)","var(--c3)"];
+  let cards="";
+  for(let i=0;i<3;i++) cards+=card(ch[i],nf(t[i]),"units this month",cc[i]);
+  cards+= act!=null ? card("Saving","Rs "+nf(act),"this month",`var(--good)`)
+                    : card("Net","Rs —","set rates","var(--good)");
+  return `<h2 class="view">Dashboard</h2>
+    <div class="cards">${cards}</div>
+    <div class="panel">
+      <h3>Monthly units by channel</h3>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--c1)"></i>${ch[0]}</span>
+        <span><i class="dot" style="background:var(--c2)"></i>${ch[1]}</span>
+        <span><i class="dot" style="background:var(--c3)"></i>${ch[2]}</span>
+      </div>
+      <div class="chartscroll"><div id="chart"></div></div>
+    </div>`;
+}
+function card(lbl,val,sub,color){
+  return `<div class="card"><div class="top" style="background:${color}"></div>
+    <div class="pad"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div></div>`;
+}
+function drawChart(){
+  const data=DB.months.map(m=>[m.name,monthTotals(m)]);
+  const peak=Math.max(1,...data.map(d=>Math.max(...d[1])));
+  const step=Math.pow(10,Math.max(0,String(Math.round(peak)).length-2));
+  const top=Math.ceil(peak/step)*step||peak;
+  const groupW=46, padL=38, padB=34, padT=8, H=240, plotH=H-padT-padB;
+  const W=padL+data.length*groupW+10;
+  const cc=["var(--c1)","var(--c2)","var(--c3)"];
+  let s=`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="inherit">`;
+  for(let g=0;g<=4;g++){ const y=padT+plotH*g/4, val=top*(1-g/4);
+    s+=`<line x1="${padL}" y1="${y}" x2="${W-6}" y2="${y}" stroke="#EEF1F6"/>`;
+    s+=`<text x="${padL-6}" y="${y+3}" text-anchor="end" font-size="9" fill="#6B7686">${nf(val)}</text>`;
+  }
+  data.forEach((d,gi)=>{
+    const gx=padL+groupW*gi+groupW/2, bw=10;
+    d[1].forEach((v,i)=>{ const bh=(v/top)*plotH, x=gx+(i-1)*(bw+1)-bw/2, y=padT+plotH-bh;
+      s+=`<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(0,bh)}" rx="2" fill="${cc[i]}"/>`; });
+    s+=`<text x="${gx}" y="${H-padB+14}" text-anchor="middle" font-size="8.5" fill="#6B7686">${d[0].replace("25","'25").replace("26","'26").trim()}</text>`;
+  });
+  s+=`<line x1="${padL}" y1="${padT+plotH}" x2="${W-6}" y2="${padT+plotH}" stroke="#DCE2EC"/></svg>`;
+  document.getElementById("chart").innerHTML=s;
+}
+
+function vRead(){
+  const names=DB.months.map(m=>m.name);
+  if(!names.length) return empty("No months yet. Add one under Setup.");
+  if(!names.includes(curMonth)) curMonth=names[names.length-1];
+  ctxBar(names.map(n=>`<option ${n===curMonth?"selected":""}>${n}</option>`).join(""));
+  document.getElementById("barsub").textContent="Tap a row to edit";
+  const m=monthByName(curMonth), ch=m.channels||["Ch1","Ch2","Ch3"];
+  const rows=computeUnits(m.readings||[]), t=monthTotals(m);
+  let body="";
+  rows.forEach((r,i)=>{
+    body+=`<tr class="readrow" onclick="editRow(${i})">
+      <td>${r.date.slice(5)}</td>
+      <td>${nf(r.r1)}</td><td class="unit">${nf(r.u1)}</td>
+      <td>${nf(r.r2)}</td><td class="unit">${nf(r.u2)}</td>
+      <td>${nf(r.r3)}</td><td class="unit">${nf(r.u3)}</td></tr>`;
+  });
+  return `<h2 class="view">Readings</h2>
+    <div class="btnrow">
+      <button class="btn" onclick="addDay()">+ Add day</button>
+    </div>
+    <div class="tblscroll"><table>
+      <thead><tr><th>Date</th><th>${ch[0]}</th><th>Un</th><th>${ch[1]}</th><th>Un</th><th>${ch[2]}</th><th>Un</th></tr></thead>
+      <tbody>${body||`<tr><td colspan="7" class="muted">No readings. Tap “Add day”.</td></tr>`}</tbody>
+    </table></div>
+    <div class="kv" style="margin-top:12px"><span class="muted">${ch[0]} total</span><b style="color:var(--c1)">${nf(t[0])} units</b></div>
+    <div class="kv"><span class="muted">${ch[1]} total</span><b style="color:var(--c2)">${nf(t[1])} units</b></div>
+    <div class="kv"><span class="muted">${ch[2]} total</span><b style="color:var(--c3)">${nf(t[2])} units</b></div>`;
+}
+
+function vQtr(){
+  const qs=groupQuarters();
+  if(!qs.length) return empty("No quarterly summary yet.");
+  const qnames=qs.map(q=>q[0]);
+  if(!qnames.includes(curQ)) curQ=qnames[qnames.length-1];
+  ctxBar(qnames.map(n=>`<option ${n===curQ?"selected":""}>${n}</option>`).join(""));
+  document.getElementById("barsub").textContent="Quarterly settlement";
+  const rows=qs.find(q=>q[0]===curQ)[1];
+  const ml=rows.map(r=>{const [y,mo]=r.month.split("-");return MA[+mo]+" "+y;});
+  const T={};
+  ["peak","offpeak","export"].forEach(ch=>{ T[ch]=rows.reduce((a,r)=>a+(r[ch].net||0),0); });
+  const closing=k=>rows[rows.length-1][k].close;
+  const disp={peak:"Peak (Import)",offpeak:"Off-peak (Import)",export:"Export"};
+  let trows="";
+  ["peak","offpeak","export"].forEach(ch=>{
+    const n=rows.map(r=>r[ch].net||0); while(n.length<3)n.push(0);
+    trows+=`<tr><td>${disp[ch]}</td><td>${nf(n[0])}</td><td>${nf(n[1])}</td><td>${nf(n[2])}</td><td><b>${nf(T[ch])}</b></td><td>${nf(closing(ch))}</td></tr>`;
+  });
+  const rates=ratesForYm(rows[rows.length-1].month);
+  const st=settlement(T.peak,T.offpeak,T.export,rates);
+  const saving=rows.reduce((a,r)=>a+(r.saving||0),0);
+  const netUnits=T.export-T.offpeak-T.peak;
+  let calc;
+  if(!st) calc=`<div class="calc"><div class="f" style="color:var(--warn)">Set Buyback and Peak rates under Setup to calculate the settlement.</div></div>`;
+  else calc=`<div class="calc">
+      <div class="small" style="font-weight:700">Est. settlement</div>
+      <div class="f">(Export ${nf(T.export)} − Off-peak ${nf(T.offpeak)}) × Rs ${st.bb} − Peak ${nf(T.peak)} × Rs ${st.pr}</div>
+      <div class="r" style="color:${st.val>=0?'var(--good)':'var(--warn)'}">= Rs ${nf(st.credit)} − Rs ${nf(st.peakCost)} = Rs ${nf(st.val)}</div>
+      <div class="tiny muted">rates shown are this quarter’s latest month</div>
+    </div>`;
+
+  // all quarters
+  let arows=""; let g={peak:0,offpeak:0,export:0,sav:0,set:0};
+  qs.forEach(([q,qr])=>{
+    const pk=qr.reduce((a,r)=>a+(r.peak.net||0),0), op=qr.reduce((a,r)=>a+(r.offpeak.net||0),0),
+          ex=qr.reduce((a,r)=>a+(r.export.net||0),0), sv=qr.reduce((a,r)=>a+(r.saving||0),0);
+    const s2=settlement(pk,op,ex,ratesForYm(qr[qr.length-1].month));
+    g.peak+=pk;g.offpeak+=op;g.export+=ex;g.sav+=sv; if(s2)g.set+=s2.val;
+    arows+=`<tr><td>${q}</td><td>${nf(pk)}</td><td>${nf(op)}</td><td>${nf(ex)}</td><td>${s2?nf(s2.val):"—"}</td><td>${nf(sv)}</td></tr>`;
+  });
+  arows+=`<tr class="tot"><td>Total</td><td>${nf(g.peak)}</td><td>${nf(g.offpeak)}</td><td>${nf(g.export)}</td><td>${nf(g.set)}</td><td>${nf(g.sav)}</td></tr>`;
+
+  return `<h2 class="view">Quarterly</h2>
+    <div class="panel">
+      <h3>${curQ}</h3>
+      <div class="small muted" style="margin-bottom:8px">${ml.join("  →  ")}</div>
+      <div class="tblscroll"><table>
+        <thead><tr><th>Channel</th><th>${ml[0]||""}</th><th>${ml[1]||""}</th><th>${ml[2]||""}</th><th>Total</th><th>Close</th></tr></thead>
+        <tbody>${trows}</tbody></table></div>
+      ${calc}
+      <div class="kv"><span class="muted">Net (Export − Off-peak − Peak)</span><b>${nf(netUnits)} units</b></div>
+      <div class="kv"><span class="muted">Quarter saving (actual)</span><b style="color:var(--good)">Rs ${nf(saving)}</b></div>
+    </div>
+    <div class="panel">
+      <h3>All quarters</h3>
+      <div class="tblscroll"><table>
+        <thead><tr><th>Qtr</th><th>Peak</th><th>Off-pk</th><th>Export</th><th>Settle</th><th>Saving</th></tr></thead>
+        <tbody>${arows}</tbody></table></div>
+    </div>`;
+}
+
+function vSet(){
+  ctxBar("");
+  document.getElementById("barsub").textContent="Setup & rates";
+  const opts=DB.months.map(m=>`<option ${m.name===curMonth?"selected":""}>${m.name}</option>`).join("");
+  const m=monthByName(curMonth)||DB.months[DB.months.length-1];
+  if(!m) return `<h2 class="view">Setup</h2>${empty("No months. Add one below.")}<button class="btn block" onclick="newMonth()">+ New month</button>`;
+  const ch=m.channels||["","",""], r=m.rates||{};
+  return `<h2 class="view">Setup</h2>
+    <div class="panel">
+      <div class="field"><label>Month</label>
+        <select id="setmonth" onchange="curMonth=this.value;render()" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:16px">${opts}</select></div>
+      <div class="field"><label>Meter reference</label><input id="f_ref" value="${esc(m.meter_ref||"")}"></div>
+      <div class="field"><label>Channel 1 label</label><input id="f_c1" value="${esc(ch[0]||"")}"></div>
+      <div class="field"><label>Channel 2 label</label><input id="f_c2" value="${esc(ch[1]||"")}"></div>
+      <div class="field"><label>Channel 3 label</label><input id="f_c3" value="${esc(ch[2]||"")}"></div>
+      <div class="field"><label>Peak rate (Rs/unit)</label><input id="f_peak" inputmode="decimal" value="${r.peak??""}"></div>
+      <div class="field"><label>Off-peak rate (Rs/unit)</label><input id="f_off" inputmode="decimal" value="${r.offpeak??""}"></div>
+      <div class="field"><label>Buyback rate (Rs/unit)</label><input id="f_bb" inputmode="decimal" value="${r.buyback??""}"></div>
+      <div class="btnrow">
+        <button class="btn" onclick="saveMonth('${esc(m.name)}')">Save changes</button>
+        <button class="btn danger" onclick="delMonth('${esc(m.name)}')">Delete</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Data</h3>
+      <div class="btnrow"><button class="btn ghost" onclick="newMonth()">+ New month</button>
+      <button class="btn ghost" onclick="exportCSV()">Export CSV</button></div>
+      <button class="btn danger block" onclick="resetData()">Reset to original data</button>
+      <div class="tiny muted" style="margin-top:8px">Everything is saved on this device. “Reset” restores the readings imported from your spreadsheet.</div>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:6px 0 4px">
+      Home Solar Monitoring · v1.0<br>by <b style="color:var(--text)">MarkFold Digital</b>
+    </div>`;
+}
+
+/* ---------- actions ---------- */
+function editRow(i){
+  const m=monthByName(curMonth), r=m.readings[i], ch=m.channels;
+  openSheet(`<h3>${r.date}</h3>
+    <div class="field"><label>Date</label><input id="e_date" value="${r.date}"></div>
+    <div class="field"><label>${ch[0]} reading</label><input id="e_r1" inputmode="decimal" value="${r.r1??""}"></div>
+    <div class="field"><label>${ch[1]} reading</label><input id="e_r2" inputmode="decimal" value="${r.r2??""}"></div>
+    <div class="field"><label>${ch[2]} reading</label><input id="e_r3" inputmode="decimal" value="${r.r3??""}"></div>
+    <div class="btnrow">
+      <button class="btn" onclick="saveRow(${i})">Save</button>
+      <button class="btn danger" onclick="delRow(${i})">Delete</button>
+    </div>
+    <button class="btn ghost block" onclick="closeSheet()">Cancel</button>`);
+}
+function val(id){ const v=document.getElementById(id).value.trim(); return v===""?null:Number(v); }
+function saveRow(i){
+  const m=monthByName(curMonth), d=document.getElementById("e_date").value.trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast("Use date format YYYY-MM-DD"); return; }
+  m.readings[i]={date:d,r1:val("e_r1"),r2:val("e_r2"),r3:val("e_r3")};
+  m.readings.sort((a,b)=>a.date<b.date?-1:1);
+  syncSummary(m); save(); closeSheet(); render(); toast("Saved");
+}
+function delRow(i){ const m=monthByName(curMonth); m.readings.splice(i,1); syncSummary(m); save(); closeSheet(); render(); toast("Deleted"); }
+function addDay(){
+  const m=monthByName(curMonth), reads=m.readings;
+  let nd, prev={r1:null,r2:null,r3:null};
+  if(reads.length){ const last=reads[reads.length-1]; const dt=new Date(last.date+"T00:00:00"); dt.setDate(dt.getDate()+1);
+    nd=dt.toISOString().slice(0,10); prev={r1:last.r1,r2:last.r2,r3:last.r3}; }
+  else nd=new Date().toISOString().slice(0,10);
+  reads.push({date:nd,...prev}); save(); render();
+  const i=reads.length-1; editRow(i);
+}
+function saveMonth(name){
+  const m=monthByName(name);
+  m.meter_ref=document.getElementById("f_ref").value.trim();
+  m.channels=[document.getElementById("f_c1").value.trim()||"Ch1",
+              document.getElementById("f_c2").value.trim()||"Ch2",
+              document.getElementById("f_c3").value.trim()||"Ch3"];
+  const rr={}; const p=val2("f_peak"),o=val2("f_off"),b=val2("f_bb");
+  if(p!=null)rr.peak=p; if(o!=null)rr.offpeak=o; if(b!=null)rr.buyback=b;
+  m.rates=rr; syncSummary(m); save(); render(); toast("Saved");
+}
+function val2(id){ const v=document.getElementById(id).value.trim(); return v===""?null:Number(v); }
+function delMonth(name){
+  askConfirm("Delete month "+name+" and all its readings?",function(){
+    const ym=nameToYm(name);
+    DB.months=DB.months.filter(m=>m.name!==name);
+    if(ym&&DB.summary) DB.summary=DB.summary.filter(s=>s.month!==ym);
+    curMonth=DB.months.length?DB.months[DB.months.length-1].name:null; save(); render(); toast("Deleted");
+  });
+}
+function newMonth(){
+  askText("New month","e.g. Jul26",function(name){
+    if(!name) return;
+    if(monthByName(name)){ toast("That month already exists"); return; }
+    const prev=DB.months[DB.months.length-1];
+    const nm={ name:name,
+      meter_ref: prev?(prev.meter_ref||""):"",
+      channels: prev?prev.channels.slice():["Peak","Off-peak","Export"],
+      rates: prev?Object.assign({},prev.rates):{},
+      readings:[] };
+    DB.months.push(nm); syncSummary(nm);
+    curMonth=name; save(); render(); toast("Month added — ref & rates carried over");
+  });
+}
+function resetData(){ askConfirm("Restore the original imported data? Your edits will be lost.",function(){ DB=clone(SEED); save(); curMonth=lastMonthName(); render(); toast("Restored"); }); }
+function exportCSV(){
+  let csv="Month,Date,Ch1,Ch1 Read,Ch1 Units,Ch2,Ch2 Read,Ch2 Units,Ch3,Ch3 Read,Ch3 Units\n";
+  for(const m of DB.months){ const ch=m.channels;
+    for(const r of computeUnits(m.readings||[])) csv+=[m.name,r.date,ch[0],r.r1,r.u1,ch[1],r.r2,r.u2,ch[2],r.r3,r.u3].map(x=>x==null?"":x).join(",")+"\n";
+  }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="meter_readings.csv"; a.click(); toast("CSV downloaded");
+}
+
+/* ---------- ui plumbing ---------- */
+function askText(title,ph,cb){
+  openSheet(`<h3>${title}</h3>
+    <div class="field"><input id="ask_in" placeholder="${esc(ph||'')}"></div>
+    <div class="btnrow"><button class="btn" id="ask_ok">OK</button>
+    <button class="btn ghost" onclick="closeSheet()">Cancel</button></div>`);
+  const inp=document.getElementById("ask_in"); setTimeout(()=>{try{inp.focus();}catch(e){}},60);
+  const go=()=>{ const v=inp.value.trim(); closeSheet(); cb(v); };
+  document.getElementById("ask_ok").onclick=go;
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+}
+function askConfirm(msg,cb){
+  openSheet(`<h3>Please confirm</h3>
+    <p style="margin:0 0 14px">${esc(msg)}</p>
+    <div class="btnrow"><button class="btn danger" id="cf_ok">Yes, continue</button>
+    <button class="btn ghost" onclick="closeSheet()">Cancel</button></div>`);
+  document.getElementById("cf_ok").onclick=()=>{ closeSheet(); cb(); };
+}
+function empty(msg){ return `<div class="empty"><div class="big">📂</div><div>${msg}</div></div>`; }
+function esc(s){ return String(s).replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function openSheet(html){ const o=document.getElementById("overlay"); document.getElementById("sheet").innerHTML=html; o.classList.add("show"); }
+function closeSheet(){ document.getElementById("overlay").classList.remove("show"); }
+document.getElementById("overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeSheet(); });
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1600); }
+document.getElementById("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){ view=b.dataset.v; render(); window.scrollTo(0,0);} });
+
+render();
+
+/* starting page: waits for the Next button */
+function hideSplash(){ const s=document.getElementById("splash"); if(s&&!s.classList.contains("hide")){ s.classList.add("hide"); setTimeout(()=>{ if(s.parentNode) s.remove(); },500); } }
+</script>
+</body>
+</html>
